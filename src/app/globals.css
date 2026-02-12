@@ -30,3 +30,12 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.banners-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.banners-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

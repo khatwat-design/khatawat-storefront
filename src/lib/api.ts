@@ -22,6 +22,13 @@ export interface Product {
   gallery?: string[];
 }
 
+export interface Banner {
+  id: number;
+  image_url: string;
+  link: string | null;
+  position: string;
+}
+
 export interface OrderItem {
   id: string;
   name: string;
@@ -89,6 +96,19 @@ export const getStoreDetails = async (domain?: string): Promise<StoreDetails> =>
   };
 };
 
+/** Fetch banners for the current tenant. Pass domain from useStore(). */
+export const getBanners = async (domain?: string): Promise<Banner[]> => {
+  const response = await fetch(buildUrl("/api/store/banners"), {
+    headers: buildHeaders(domain),
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  return response.json();
+};
+
 /** Fetch products for the current tenant. Pass domain from useStore(). */
 export const getProducts = async (domain?: string): Promise<Product[]> => {
   const response = await fetch(buildUrl("/api/store/products"), {
@@ -148,6 +168,7 @@ export interface CheckoutOrderPayload {
   phone: string;
   address: string;
   items: { product_id: string; quantity: number }[];
+  coupon_code?: string;
 }
 
 export type CheckoutOrderResponse = { success?: boolean; message?: string; error?: string };

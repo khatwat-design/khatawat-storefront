@@ -6,11 +6,13 @@ import { useState } from "react";
 import { formatCurrency } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
 import { useProducts } from "@/lib/use-products";
+import { useBanners } from "@/lib/use-banners";
 import { useStore } from "@/components/store-context";
 
 export default function Home() {
   const addItem = useCartStore((state) => state.addItem);
   const { products, loading } = useProducts();
+  const { banners, loading: bannersLoading } = useBanners();
   const { domainQuery } = useStore();
   const [addedToCart, setAddedToCart] = useState<string | null>(null);
 
@@ -26,6 +28,34 @@ export default function Home() {
 
   return (
     <div className="space-y-6 md:space-y-12 px-3 md:px-6">
+      {!bannersLoading && banners.length > 0 && (
+        <section className="-mx-3 md:-mx-6">
+          <div className="banners-scroll flex gap-3 overflow-x-auto px-3 md:px-6 pb-2">
+            {banners.map((banner) => {
+              const content = (
+                <div className="relative flex-shrink-0 w-full min-w-[280px] max-w-[600px] aspect-[16/9] md:aspect-[21/9] rounded-xl md:rounded-2xl overflow-hidden bg-gray-100">
+                  <Image
+                    src={banner.image_url}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 600px"
+                    unoptimized={banner.image_url.startsWith("http")}
+                  />
+                </div>
+              );
+              return banner.link ? (
+                <Link key={banner.id} href={banner.link} target="_blank" rel="noopener noreferrer" className="block">
+                  {content}
+                </Link>
+              ) : (
+                <div key={banner.id}>{content}</div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="space-y-4 md:space-y-6">
         <div className="text-center">
           <h1 className="text-xl md:text-3xl font-bold text-black mb-2 md:mb-4">
