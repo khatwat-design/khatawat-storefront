@@ -53,22 +53,27 @@ const mapDetails = (details: {
  * details from the backend with that domain, and provides domain + domainQuery
  * so all API calls and links use the correct tenant.
  */
+function getDomainFromHost(): string | null {
+  if (typeof window === "undefined") return null;
+  const host = window.location.hostname;
+  if (!host || host === "localhost" || host === "127.0.0.1") return null;
+  return host;
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const domainFromUrl = searchParams.get("domain");
+  const domainFromHost = getDomainFromHost();
 
   const domain = useMemo(() => {
-    if (domainFromUrl) {
-      return domainFromUrl;
-    }
+    if (domainFromUrl) return domainFromUrl;
+    if (domainFromHost) return domainFromHost;
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem("store-domain");
-      if (stored) {
-        return stored;
-      }
+      if (stored) return stored;
     }
     return null;
-  }, [domainFromUrl]);
+  }, [domainFromUrl, domainFromHost]);
 
   useEffect(() => {
     if (domainFromUrl && typeof window !== "undefined") {
