@@ -31,13 +31,15 @@ type StoreContextValue = {
 
 const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 
+type StoreDetailsMapped = Omit<StoreContextValue, "domain" | "domainQuery" | "storeDetails">;
+
 const mapDetails = (details: {
   store_name: string;
   brand_color: string;
   currency: string;
   logo_url: string;
   shipping_cost?: number;
-}): StoreContextValue => ({
+}): StoreDetailsMapped => ({
   storeName: details.store_name,
   brandColor: details.brand_color,
   currency: details.currency,
