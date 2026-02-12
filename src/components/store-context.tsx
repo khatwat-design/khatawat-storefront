@@ -33,7 +33,7 @@ type StoreContextValue = {
 
 const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 
-type StoreDetailsMapped = Omit<StoreContextValue, "domain" | "domainQuery" | "storeDetails">;
+type StoreDetailsMapped = Omit<StoreContextValue, "domain" | "domainQuery" | "storeDetails" | "isLoading">;
 
 const mapDetails = (details: {
   store_name: string;
