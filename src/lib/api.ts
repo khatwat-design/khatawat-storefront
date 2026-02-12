@@ -173,6 +173,33 @@ export interface CheckoutOrderPayload {
 
 export type CheckoutOrderResponse = { success?: boolean; message?: string; error?: string };
 
+export interface ValidateCouponResponse {
+  valid: boolean;
+  discount?: number;
+  discount_type?: string;
+  discount_value?: number;
+  message?: string;
+}
+
+/** Validate coupon code. Pass domain from useStore(). */
+export const validateCoupon = async (
+  code: string,
+  subtotal: number,
+  domain?: string
+): Promise<ValidateCouponResponse> => {
+  const url = buildUrl("api/storefront/validate-coupon");
+  const response = await fetch(url, {
+    method: "POST",
+    headers: buildHeaders(domain),
+    body: JSON.stringify({ code, subtotal }),
+  });
+  const data = (await response.json()) as ValidateCouponResponse & { message?: string };
+  if (!response.ok) {
+    return { valid: false, message: data.message || "الكود غير صالح" };
+  }
+  return data;
+};
+
 /** Submit checkout to Laravel. Pass domain from useStore() so the order is attributed to the correct tenant. Uses NEXT_PUBLIC_API_URL. */
 export const submitCheckoutOrder = async (
   payload: CheckoutOrderPayload,
