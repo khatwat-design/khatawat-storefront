@@ -7,6 +7,7 @@ import "./globals.css";
 import { CartProvider } from "@/components/cart-context";
 import AppShell from "@/components/app-shell";
 import AnalyticsScripts from "@/components/analytics/AnalyticsScripts";
+import MetaPixel from "@/components/analytics/MetaPixel";
 import { StoreProvider } from "@/components/store-context";
 import { Suspense } from "react";
 
@@ -54,6 +55,7 @@ export default async function RootLayout({
         <Suspense fallback={null}>
           <StoreProvider>
             <AnalyticsScripts />
+            <MetaPixel />
             <CartProvider>
               <AppShell>{children}</AppShell>
             </CartProvider>

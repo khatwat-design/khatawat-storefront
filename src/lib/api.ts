@@ -1,6 +1,62 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const STORE_API_KEY = process.env.NEXT_PUBLIC_STORE_API_KEY;
 
+/** Cache TTL in seconds (stale-while-revalidate). */
+const CACHE_TTL_SEC = 60;
+
+/** Simple in-memory cache for GET requests. Key: `${url}|${domain}` */
+const cache = new Map<
+  string,
+  { data: unknown; timestamp: number; fresh: boolean }
+>();
+
+function getCacheKey(url: string, domain?: string): string {
+  return `${url}|${domain ?? ""}`;
+}
+
+function getCachedEntry<T>(
+  key: string
+): { data: T; ageSec: number } | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  const ageSec = (Date.now() - entry.timestamp) / 1000;
+  if (ageSec > CACHE_TTL_SEC * 2) {
+    cache.delete(key);
+    return null;
+  }
+  return { data: entry.data as T, ageSec };
+}
+
+function setCache(key: string, data: unknown): void {
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+    fresh: true,
+  });
+}
+
+/** Cached fetch with stale-while-revalidate. Returns cached if fresh; if stale, returns cached and revalidates in background. */
+async function cachedFetch<T>(
+  url: string,
+  domain: string | undefined,
+  fetcher: () => Promise<T>
+): Promise<T> {
+  const key = getCacheKey(url, domain);
+  const entry = getCachedEntry<T>(key);
+
+  if (entry) {
+    if (entry.ageSec <= CACHE_TTL_SEC) {
+      return entry.data;
+    }
+    fetcher().then((data) => setCache(key, data));
+    return entry.data;
+  }
+
+  const data = await fetcher();
+  setCache(key, data);
+  return data;
+}
+
 export interface StoreDetails {
   store_name: string;
   brand_color: string;
@@ -8,6 +64,7 @@ export interface StoreDetails {
   logo_url: string;
   shipping_cost?: number;
   facebook_pixel_id?: string;
+  meta_pixel_id?: string;
   tiktok_pixel_id?: string;
   snapchat_pixel_id?: string;
   google_analytics_id?: string;
@@ -77,66 +134,75 @@ const buildHeaders = (domain?: string) => ({
 
 /** Fetch store settings for the given tenant. Pass domain from URL (?domain=) via useStore(). */
 export const getStoreDetails = async (domain?: string): Promise<StoreDetails> => {
-  const response = await fetch(buildUrl("/api/store"), {
-    headers: buildHeaders(domain),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch store details.");
-  }
-
-  const data = (await response.json()) as StoreDetails;
-  return {
-    store_name: data.store_name,
-    brand_color: data.brand_color,
-    currency: data.currency,
-    logo_url: data.logo_url || "",
-    shipping_cost: data.shipping_cost ?? 0,
-  };
+  return cachedFetch(
+    buildUrl("/api/store"),
+    domain,
+    async () => {
+      const response = await fetch(buildUrl("/api/store"), {
+        headers: buildHeaders(domain),
+      });
+      if (!response.ok) throw new Error("Failed to fetch store details.");
+      const data = (await response.json()) as StoreDetails;
+      return {
+        store_name: data.store_name,
+        brand_color: data.brand_color,
+        currency: data.currency,
+        logo_url: data.logo_url || "",
+        shipping_cost: data.shipping_cost ?? 0,
+        facebook_pixel_id: data.facebook_pixel_id,
+        meta_pixel_id: data.meta_pixel_id ?? data.facebook_pixel_id,
+        tiktok_pixel_id: data.tiktok_pixel_id,
+        snapchat_pixel_id: data.snapchat_pixel_id,
+        google_analytics_id: data.google_analytics_id,
+      };
+    }
+  );
 };
 
 /** Fetch banners for the current tenant. Pass domain from useStore(). */
 export const getBanners = async (domain?: string): Promise<Banner[]> => {
-  const response = await fetch(buildUrl("/api/store/banners"), {
-    headers: buildHeaders(domain),
-  });
-
-  if (!response.ok) {
-    return [];
-  }
-
-  return response.json();
+  return cachedFetch(
+    buildUrl("/api/store/banners"),
+    domain,
+    async () => {
+      const response = await fetch(buildUrl("/api/store/banners"), {
+        headers: buildHeaders(domain),
+      });
+      if (!response.ok) return [];
+      return response.json();
+    }
+  );
 };
 
 /** Fetch products for the current tenant. Pass domain from useStore(). */
 export const getProducts = async (domain?: string): Promise<Product[]> => {
-  const response = await fetch(buildUrl("/api/store/products"), {
-    headers: buildHeaders(domain),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch products.");
-  }
-
-  return response.json();
+  return cachedFetch(
+    buildUrl("/api/store/products"),
+    domain,
+    async () => {
+      const response = await fetch(buildUrl("/api/store/products"), {
+        headers: buildHeaders(domain),
+      });
+      if (!response.ok) throw new Error("Failed to fetch products.");
+      return response.json();
+    }
+  );
 };
 
 /** Fetch a single product for the current tenant. Pass domain from useStore(). */
 export const getProduct = async (id: string, domain?: string): Promise<Product | null> => {
-  const response = await fetch(buildUrl(`/api/store/products/${id}`), {
-    headers: buildHeaders(domain),
-  });
-
-  if (response.status === 404) {
-    return null;
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch product.");
-  }
-
-  return response.json();
+  return cachedFetch(
+    buildUrl(`/api/store/products/${id}`),
+    domain,
+    async () => {
+      const response = await fetch(buildUrl(`/api/store/products/${id}`), {
+        headers: buildHeaders(domain),
+      });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Failed to fetch product.");
+      return response.json();
+    }
+  );
 };
 
 /** Place order for the current tenant. Pass domain from useStore(). */

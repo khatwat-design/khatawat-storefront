@@ -6,8 +6,10 @@ import { formatCurrency } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
 import { useProducts } from "@/lib/use-products";
 import { useStore } from "@/components/store-context";
+import { useMetaPixelTrack } from "@/components/analytics/MetaPixel";
 
 export default function ProductsPage() {
+  const { trackAddToCart } = useMetaPixelTrack();
   const items = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
@@ -89,7 +91,10 @@ export default function ProductsPage() {
               </span>
               <button
                 type="button"
-                onClick={() => addItem(product, 1)}
+                onClick={() => {
+                  addItem(product, 1);
+                  trackAddToCart(product, 1);
+                }}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white transition hover:opacity-90"
                 aria-label={`إضافة ${product.name}`}
               >
@@ -98,7 +103,10 @@ export default function ProductsPage() {
             </div>
             <button
               type="button"
-              onClick={() => addItem(product, 1)}
+              onClick={() => {
+                addItem(product, 1);
+                trackAddToCart(product, 1);
+              }}
               className="mt-4 w-full rounded-2xl border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-black/70 transition hover:border-black"
             >
               إضافة للسلة

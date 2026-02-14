@@ -6,6 +6,7 @@ import { useStore } from '@/components/store-context';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { submitCheckoutOrder, validateCoupon } from '@/lib/api';
+import { useMetaPixelTrack } from '@/components/analytics/MetaPixel';
 
 const governorates = [
   'بغداد', 'البصرة', 'نينوى', 'أربيل', 'النجف', 'كربلاء', 'واسط', 'بابل',
@@ -19,6 +20,7 @@ const inputClass =
 export default function CheckoutPage() {
   const { items, getCartTotal, clearCart } = useCartStore();
   const store = useStore();
+  const { trackInitiateCheckout } = useMetaPixelTrack();
   const { domainQuery, domain } = store;
   const router = useRouter();
   const justSubmittedSuccess = useRef(false);
@@ -40,6 +42,14 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const total = Math.max(0, subtotal + shipping - couponDiscount);
+  const hasTrackedCheckout = useRef(false);
+
+  useEffect(() => {
+    if (items.length > 0 && !hasTrackedCheckout.current) {
+      hasTrackedCheckout.current = true;
+      trackInitiateCheckout(total, items.reduce((s, i) => s + i.quantity, 0));
+    }
+  }, [items, total, trackInitiateCheckout]);
 
   useEffect(() => {
     if (items.length === 0 && !justSubmittedSuccess.current) {
@@ -86,8 +96,12 @@ export default function CheckoutPage() {
         ...(couponApplied && couponCode.trim() ? { coupon_code: couponCode.trim() } : {}),
       };
 
-      await submitCheckoutOrder(payload, domain ?? undefined);
+      const res = await submitCheckoutOrder(payload, domain ?? undefined);
       justSubmittedSuccess.current = true;
+      const orderId = (res as { order_id?: string })?.order_id ?? null;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('meta_pixel_purchase', JSON.stringify({ value: total, orderId }));
+      }
       router.replace(domainQuery ? `/thank-you${domainQuery}` : '/thank-you');
       clearCart();
     } catch (err: unknown) {

@@ -1,14 +1,29 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useStore } from "@/components/store-context";
+import { useMetaPixelTrack } from "@/components/analytics/MetaPixel";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const invoice = searchParams.get("invoice");
   const { domainQuery } = useStore();
+  const { trackPurchase } = useMetaPixelTrack();
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem("meta_pixel_purchase");
+      if (stored) {
+        const { value, orderId } = JSON.parse(stored) as { value: number; orderId?: string };
+        trackPurchase(value, orderId ?? invoice ?? undefined);
+        sessionStorage.removeItem("meta_pixel_purchase");
+      }
+    } catch {
+      // ignore
+    }
+  }, [trackPurchase, invoice]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 rounded-3xl border border-[var(--color-border)] bg-white p-10 text-center shadow-[var(--shadow-soft)]">

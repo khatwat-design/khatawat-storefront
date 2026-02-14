@@ -8,8 +8,10 @@ import { formatCurrency } from "@/lib/products";
 import { useCartStore } from "@/lib/store";
 import { getProduct, type Product } from "@/lib/api";
 import { useStore } from "@/components/store-context";
+import { useMetaPixelTrack } from "@/components/analytics/MetaPixel";
 
 export default function ProductDetailPage() {
+  const { trackViewContent, trackAddToCart } = useMetaPixelTrack();
   const items = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
@@ -47,7 +49,7 @@ export default function ProductDetailPage() {
     };
 
     load();
-  }, [params?.id, domain]);
+  }, [params?.id, domain, trackViewContent]);
 
   if (notFound && !loading) {
     return (
@@ -164,11 +166,13 @@ export default function ProductDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-                onClick={() =>
-                  product && updateQuantity(product.id, quantity - 1)
-                }
+          <button
+            type="button"
+              onClick={() => {
+                  if (product) {
+                    updateQuantity(product.id, quantity - 1);
+                  }
+                }}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] text-lg font-semibold text-black/70"
               aria-label="إنقاص الكمية"
               disabled={!product}
@@ -180,7 +184,12 @@ export default function ProductDetailPage() {
             </span>
             <button
               type="button"
-                onClick={() => product && addItem(product, 1)}
+                onClick={() => {
+                  if (product) {
+                    addItem(product, 1);
+                    trackAddToCart(product, 1);
+                  }
+                }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-lg font-semibold text-white"
               aria-label="زيادة الكمية"
               disabled={!product}
@@ -190,7 +199,12 @@ export default function ProductDetailPage() {
           </div>
           <button
             type="button"
-              onClick={() => product && addItem(product, 1)}
+              onClick={() => {
+                if (product) {
+                  addItem(product, 1);
+                  trackAddToCart(product, 1);
+                }
+              }}
             className="w-full rounded-2xl border border-[var(--color-border)] px-6 py-3 text-sm font-semibold text-black/70 transition hover:border-black"
             disabled={!product}
           >

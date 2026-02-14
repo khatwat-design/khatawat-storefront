@@ -8,9 +8,11 @@ import { useCartStore } from "@/lib/store";
 import { useProducts } from "@/lib/use-products";
 import { useBanners } from "@/lib/use-banners";
 import { useStore } from "@/components/store-context";
+import { useMetaPixelTrack } from "@/components/analytics/MetaPixel";
 
 export default function Home() {
   const addItem = useCartStore((state) => state.addItem);
+  const { trackAddToCart } = useMetaPixelTrack();
   const { products, loading } = useProducts();
   const { banners, loading: bannersLoading } = useBanners();
   const { domainQuery } = useStore();
@@ -22,6 +24,7 @@ export default function Home() {
       return;
     }
     addItem(product, 1);
+    trackAddToCart(product, 1);
     setAddedToCart(productId);
     setTimeout(() => setAddedToCart(null), 2000);
   };

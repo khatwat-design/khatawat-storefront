@@ -4,14 +4,26 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useCartStore } from "@/lib/store";
 import { useStore } from "@/components/store-context";
+import { useMetaPixelTrack } from "@/components/analytics/MetaPixel";
 
 export default function ThankYouPage() {
   const clearCart = useCartStore((state) => state.clearCart);
   const { domainQuery } = useStore();
+  const { trackPurchase } = useMetaPixelTrack();
 
   useEffect(() => {
     clearCart();
-  }, []);
+    try {
+      const stored = sessionStorage.getItem("meta_pixel_purchase");
+      if (stored) {
+        const { value, orderId } = JSON.parse(stored) as { value: number; orderId?: string };
+        trackPurchase(value, orderId);
+        sessionStorage.removeItem("meta_pixel_purchase");
+      }
+    } catch {
+      // ignore
+    }
+  }, [clearCart, trackPurchase]);
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-16" dir="rtl">
